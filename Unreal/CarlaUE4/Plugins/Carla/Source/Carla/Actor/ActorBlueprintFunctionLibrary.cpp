@@ -907,6 +907,13 @@ void UActorBlueprintFunctionLibrary::MakeGnssDefinition(
   NoiseSeed.RecommendedValues = { TEXT("0") };
   NoiseSeed.bRestrictToRecommended = false;
 
+  // - GeoFlag -----------------------------------
+  FActorVariation StdGeoFlag;
+  StdGeoFlag.Id = TEXT("geo_flag");
+  StdGeoFlag.Type = EActorAttributeType::Bool;
+  StdGeoFlag.RecommendedValues = { TEXT("true") };
+  StdGeoFlag.bRestrictToRecommended = false;
+
   // - Latitude ----------------------------------
   FActorVariation StdDevLat;
   StdDevLat.Id = TEXT("noise_lat_stddev");
@@ -945,12 +952,108 @@ void UActorBlueprintFunctionLibrary::MakeGnssDefinition(
 
   Definition.Variations.Append({
     NoiseSeed,
+    StdGeoFlag,
     StdDevLat,
     BiasLat,
     StdDevLong,
     BiasLong,
     StdDevAlt,
     BiasAlt});
+
+  Success = CheckActorDefinition(Definition);
+}
+
+FActorDefinition UActorBlueprintFunctionLibrary::MakeRtkDefinition()
+{
+  FActorDefinition Definition;
+  bool Success;
+  MakeRtkDefinition(Success, Definition);
+  check(Success);
+  return Definition;
+}
+
+void UActorBlueprintFunctionLibrary::MakeRtkDefinition(
+    bool &Success,
+    FActorDefinition &Definition)
+{
+  FillIdAndTags(Definition, TEXT("sensor"), TEXT("other"), TEXT("rtk"));
+  AddVariationsForSensor(Definition);
+
+  // - Noise seed --------------------------------
+  FActorVariation NoiseSeed;
+  NoiseSeed.Id = TEXT("noise_seed");
+  NoiseSeed.Type = EActorAttributeType::Int;
+  NoiseSeed.RecommendedValues = { TEXT("0") };
+  NoiseSeed.bRestrictToRecommended = false;
+
+  // - GeoFlag -----------------------------------
+  FActorVariation StdGeoFlag;
+  StdGeoFlag.Id = TEXT("geo_flag");
+  StdGeoFlag.Type = EActorAttributeType::Bool;
+  StdGeoFlag.RecommendedValues = { TEXT("true") };
+  StdGeoFlag.bRestrictToRecommended = false;
+
+  // - Latitude ----------------------------------
+  FActorVariation StdDevLat;
+  StdDevLat.Id = TEXT("noise_lat_stddev");
+  StdDevLat.Type = EActorAttributeType::Float;
+  StdDevLat.RecommendedValues = { TEXT("0.0") };
+  StdDevLat.bRestrictToRecommended = false;
+  FActorVariation BiasLat;
+  BiasLat.Id = TEXT("noise_lat_bias");
+  BiasLat.Type = EActorAttributeType::Float;
+  BiasLat.RecommendedValues = { TEXT("0.0") };
+  BiasLat.bRestrictToRecommended = false;
+
+  // - Longitude ---------------------------------
+  FActorVariation StdDevLong;
+  StdDevLong.Id = TEXT("noise_lon_stddev");
+  StdDevLong.Type = EActorAttributeType::Float;
+  StdDevLong.RecommendedValues = { TEXT("0.0") };
+  StdDevLong.bRestrictToRecommended = false;
+  FActorVariation BiasLong;
+  BiasLong.Id = TEXT("noise_lon_bias");
+  BiasLong.Type = EActorAttributeType::Float;
+  BiasLong.RecommendedValues = { TEXT("0.0") };
+  BiasLong.bRestrictToRecommended = false;
+
+  // - Altitude ----------------------------------
+  FActorVariation StdDevAlt;
+  StdDevAlt.Id = TEXT("noise_alt_stddev");
+  StdDevAlt.Type = EActorAttributeType::Float;
+  StdDevAlt.RecommendedValues = { TEXT("0.0") };
+  StdDevAlt.bRestrictToRecommended = false;
+  FActorVariation BiasAlt;
+  BiasAlt.Id = TEXT("noise_alt_bias");
+  BiasAlt.Type = EActorAttributeType::Float;
+  BiasAlt.RecommendedValues = { TEXT("0.0") };
+  BiasAlt.bRestrictToRecommended = false;
+
+  // - Radius ----------------------------------
+  FActorVariation RtkRadius;
+  RtkRadius.Id = TEXT("range");
+  RtkRadius.Type = EActorAttributeType::Float;
+  RtkRadius.RecommendedValues = { TEXT("100.0") };
+  RtkRadius.bRestrictToRecommended = false;
+
+  // - RoverFlag ----------------------------------
+  FActorVariation RtkRoverFlag;
+  RtkRoverFlag.Id = TEXT("rover_flag");
+  RtkRoverFlag.Type = EActorAttributeType::Bool;
+  RtkRoverFlag.RecommendedValues = { TEXT("false") };
+  RtkRoverFlag.bRestrictToRecommended = false;
+
+  Definition.Variations.Append({
+    NoiseSeed,
+    StdGeoFlag,
+    StdDevLat,
+    BiasLat,
+    StdDevLong,
+    BiasLong,
+    StdDevAlt,
+    BiasAlt,
+    RtkRadius, 
+    RtkRoverFlag});
 
   Success = CheckActorDefinition(Definition);
 }
@@ -1515,6 +1618,8 @@ void UActorBlueprintFunctionLibrary::SetGnss(
     Gnss->SetSeed(Gnss->GetRandomEngine()->GenerateRandomSeed());
   }
 
+  Gnss->SetGeoFlag(
+      RetrieveActorAttributeToBool("geo_flag", Description.Variations, true));
   Gnss->SetLatitudeDeviation(
       RetrieveActorAttributeToFloat("noise_lat_stddev", Description.Variations, 0.0f));
   Gnss->SetLongitudeDeviation(
@@ -1527,6 +1632,41 @@ void UActorBlueprintFunctionLibrary::SetGnss(
       RetrieveActorAttributeToFloat("noise_lon_bias", Description.Variations, 0.0f));
   Gnss->SetAltitudeBias(
       RetrieveActorAttributeToFloat("noise_alt_bias", Description.Variations, 0.0f));
+}
+
+void UActorBlueprintFunctionLibrary::SetRtk(
+    const FActorDescription &Description,
+    ARtkSensor *Rtk)
+{
+  CARLA_ABFL_CHECK_ACTOR(Rtk);
+  if (Description.Variations.Contains("noise_seed"))
+  {
+    Rtk->SetSeed(
+      RetrieveActorAttributeToInt("noise_seed", Description.Variations, 0));
+  }
+  else
+  {
+    Rtk->SetSeed(Rtk->GetRandomEngine()->GenerateRandomSeed());
+  }
+
+  Rtk->SetGeoFlag(
+      RetrieveActorAttributeToBool("geo_flag", Description.Variations, true));
+  Rtk->SetLatitudeDeviation(
+      RetrieveActorAttributeToFloat("noise_lat_stddev", Description.Variations, 0.0f));
+  Rtk->SetLongitudeDeviation(
+      RetrieveActorAttributeToFloat("noise_lon_stddev", Description.Variations, 0.0f));
+  Rtk->SetAltitudeDeviation(
+      RetrieveActorAttributeToFloat("noise_alt_stddev", Description.Variations, 0.0f));
+  Rtk->SetLatitudeBias(
+      RetrieveActorAttributeToFloat("noise_lat_bias", Description.Variations, 0.0f));
+  Rtk->SetLongitudeBias(
+      RetrieveActorAttributeToFloat("noise_lon_bias", Description.Variations, 0.0f));
+  Rtk->SetAltitudeBias(
+      RetrieveActorAttributeToFloat("noise_alt_bias", Description.Variations, 0.0f));
+  Rtk->SetRange(
+      RetrieveActorAttributeToFloat("range", Description.Variations, 1000.0f));
+  Rtk->SetRoverFlag(
+      RetrieveActorAttributeToBool("rover_flag", Description.Variations, true));
 }
 
 void UActorBlueprintFunctionLibrary::SetIMU(

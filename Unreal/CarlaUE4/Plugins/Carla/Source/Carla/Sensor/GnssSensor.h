@@ -34,6 +34,7 @@ public:
 
   void Tick(float DeltaSeconds) override;
 
+  void SetGeoFlag(bool Value);
   void SetLatitudeDeviation(float Value);
   void SetLongitudeDeviation(float Value);
   void SetAltitudeDeviation(float Value);
@@ -42,6 +43,7 @@ public:
   void SetLongitudeBias(float Value);
   void SetAltitudeBias(float Value);
 
+  bool  GetGeoFlag() const;
   float GetLatitudeDeviation() const;
   float GetLongitudeDeviation() const;
   float GetAltitudeDeviation() const;
@@ -57,6 +59,8 @@ protected:
 private:
 
   carla::geom::GeoLocation CurrentGeoReference;
+
+  bool  GeoFlag;
 
   float LatitudeDeviation;
   float LongitudeDeviation;

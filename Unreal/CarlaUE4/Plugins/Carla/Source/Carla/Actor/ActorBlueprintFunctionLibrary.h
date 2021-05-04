@@ -12,6 +12,7 @@
 #include "Carla/Actor/PropParameters.h"
 #include "Carla/Actor/VehicleParameters.h"
 #include "Carla/Sensor/GnssSensor.h"
+#include "Carla/Sensor/RtkSensor.h"
 #include "Carla/Sensor/Radar.h"
 #include "Carla/Sensor/InertialMeasurementUnit.h"
 
@@ -84,6 +85,13 @@ public:
 
   UFUNCTION(Category = "Carla Actor", BlueprintCallable)
   static void MakeGnssDefinition(
+      bool &Success,
+      FActorDefinition &Definition);
+
+  static FActorDefinition MakeRtkDefinition();
+
+  UFUNCTION(Category = "Carla Actor", BlueprintCallable)
+  static void MakeRtkDefinition(
       bool &Success,
       FActorDefinition &Definition);
 
@@ -215,6 +223,8 @@ public:
   static void SetLidar(const FActorDescription &Description, FLidarDescription &Lidar);
 
   static void SetGnss(const FActorDescription &Description, AGnssSensor *Gnss);
+
+  static void SetRtk(const FActorDescription &Description, ARtkSensor *Rtk);
 
   static void SetIMU(const FActorDescription &Description, AInertialMeasurementUnit *IMU);
 

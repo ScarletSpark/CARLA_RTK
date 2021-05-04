@@ -44,12 +44,29 @@ void AGnssSensor::Tick(float DeltaSeconds)
   const float AltError = RandomEngine->GetNormalDistribution(0.0f, AltitudeDeviation);
 
   // Apply the noise to the sensor
-  double Latitude = CurrentLocation.latitude + LatitudeBias + LatError;
-  double Longitude = CurrentLocation.longitude + LongitudeBias + LonError;
-  double Altitude = CurrentLocation.altitude + AltitudeBias + AltError;
+
+  double Latitude, Longitude, Altitude;
+
+  if (GeoFlag)
+  { 
+    Latitude = CurrentLocation.latitude + LatitudeBias + LatError;
+    Longitude = CurrentLocation.longitude + LongitudeBias + LonError;
+    Altitude = CurrentLocation.altitude + AltitudeBias + AltError;
+  }
+  else
+  {
+    Latitude = Location.x + LatitudeBias + LatError;
+    Longitude = Location.y + LongitudeBias + LonError;
+    Altitude = Location.z + AltitudeBias + AltError;
+  }
 
   auto Stream = GetDataStream(*this);
   Stream.Send(*this, carla::geom::GeoLocation{Latitude, Longitude, Altitude});
+}
+
+void AGnssSensor::SetGeoFlag(bool Value)
+{
+  GeoFlag = Value;
 }
 
 void AGnssSensor::SetLatitudeDeviation(float Value)
@@ -82,6 +99,10 @@ void AGnssSensor::SetAltitudeBias(float Value)
   AltitudeBias = Value;
 }
 
+bool  AGnssSensor::GetGeoFlag() const
+{
+  return GeoFlag;
+}
 float AGnssSensor::GetLatitudeDeviation() const
 {
   return LatitudeDeviation;
