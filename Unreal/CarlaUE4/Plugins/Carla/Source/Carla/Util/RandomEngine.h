@@ -8,6 +8,11 @@
 
 #include <random>
 
+
+#include "Kismet/KismetSystemLibrary.h"
+#include "Engine/World.h"
+#include "Engine/Engine.h"
+
 #include "RandomEngine.generated.h"
 
 UCLASS(Blueprintable,BlueprintType)
@@ -24,6 +29,10 @@ public:
 
   /// Generate a non-deterministic random id.
   static uint64 GenerateRandomId();
+
+  static float last_value;
+
+  static int64 last_sec;
 
   /// @}
   // ===========================================================================
@@ -110,6 +119,19 @@ public:
   float GetNormalDistribution(float Mean, float StandardDeviation)
   {
     return std::normal_distribution<float>(Mean, StandardDeviation)(Engine);
+  }
+
+  UFUNCTION(BlueprintCallable)
+  float GetNormalDistributionByTick(float Mean, float StandardDeviation, float UpdateRate = 5)
+  {
+    if( floor(GEngine->GetWorldFromContextObjectChecked(this)->GetTimeSeconds() * UpdateRate) != last_sec)
+    {
+      last_sec = floor(GEngine->GetWorldFromContextObjectChecked(this)->GetTimeSeconds() * UpdateRate);
+      last_value = std::normal_distribution<float>(Mean, StandardDeviation)(Engine);
+    }
+
+    // return std::normal_distribution<float>(Mean, StandardDeviation)(Engine);
+    return last_value;
   }
 
   /// @}

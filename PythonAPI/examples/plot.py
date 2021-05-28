@@ -4,9 +4,21 @@ import math
 import statistics
 from scipy import stats
 
+
+infilename = "RTK_DATA.txt"
+outfilename = "new_plot_data.txt"
+
+lines_seen = set() # holds lines already seen
+outfile = open(outfilename, "w")
+for line in open(infilename, "r"):
+    if line not in lines_seen: # not a duplicate
+        outfile.write(line)
+        lines_seen.add(line)
+outfile.close()
+
 lines = []
 
-with open('plot_data.txt') as f:
+with open(outfilename) as f:
     lines = f.readlines()
 
 parsed_lines = []
@@ -39,10 +51,10 @@ len_m = statistics.mean(v_lenth)
 len_std = statistics.stdev(v_lenth)
 
 # expected = stats.norm.ppf(0.95, loc = len_m)
-x_exp = np.linspace(min(v_lenth), max(v_lenth), 3500)
-x_deg = np.linspace(min(deg), max(deg), 3500)
+x_exp = np.linspace(min(v_lenth), max(v_lenth), len(v_lenth))
+x_deg = np.linspace(min(deg), max(deg), len(v_lenth))
 # rv = stats.norm.pdf(x_exp, loc=len_m)
-rv = np.random.normal(len_m, 0.0022, 3500)
+rv = np.random.normal(len_m, 0.0022, len(v_lenth))
 # print(rv)
 
 
@@ -57,9 +69,11 @@ ang_std = statistics.stdev(deg)
 ang_chi, ang_p = stats.normaltest(deg) 
 print("ang_chi = {}, ang_p = {}".format(ang_chi, ang_p))
 
+print("Sample size = {}".format(len(v_lenth)))
+
 """Chi-squared test for normal destribution"""
 
-fr_num = 16
+fr_num = 18
 
 bins = [-float('inf')]
 for i in range(fr_num - 1):
@@ -70,7 +84,7 @@ bins.append(float('inf'))
 
 frequency = []
 for i in range(fr_num):
-    observed, expected = sum(num >= bins[i] and num < bins[i+1] for num in v_lenth), (3500/( fr_num ))
+    observed, expected = sum(num >= bins[i] and num < bins[i+1] for num in v_lenth), (len(v_lenth)/( fr_num ))
     print('{:2d}'.format(observed), expected)
     frequency.append((observed, expected))
 
@@ -97,13 +111,13 @@ axs[0].hist(v_lenth, bins=(fr_num))
 # axs[0].plot(x_exp, rv)
 axs[0].set_xlabel('Values, m')
 axs[0].set_ylabel('Density')
-axs[0].set_title('Base vector lenth')
+axs[0].set_title('Base vector length')
 # axs[0].plot(, rv*1000)
 # axs[0].legend("m = {}, STD = {}".format(len_m, len_std))
 # axs[0].axis([2.075, 2.095, 0, 100])
 axs[0].grid()
 
-axs[1].hist(deg, bins=35)
+axs[1].hist(deg, bins=(fr_num)) #35
 # axs[1].plot(x_deg, stats.norm.pdf(x_deg, ang_m, ang_std))
 axs[1].set_xlabel('Values, °')
 axs[1].set_ylabel('Density')

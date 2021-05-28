@@ -9,6 +9,10 @@
 
 #include <limits>
 
+float URandomEngine::last_value = 0;
+
+int64 URandomEngine::last_sec = 0;
+
 uint64 URandomEngine::GenerateRandomId()
 {
   // Tuned to be fast as this function might get called relatively often.

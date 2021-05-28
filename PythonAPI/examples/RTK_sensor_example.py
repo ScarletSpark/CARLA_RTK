@@ -258,12 +258,12 @@ class World(object):
         self.collision_sensor = CollisionSensor(self.player, self.hud)
         self.lane_invasion_sensor = LaneInvasionSensor(self.player, self.hud)
         self.safe_distance_sensor = SafeDistanceSensor(self.player, self.hud)
-        gnss_noise = 0.05
+        gnss_noise = 0.0022
         self.gnss_sensor = GnssSensor(self.player, 0, -1, 0, 0, False)
         self.gnss_sensor_2 = GnssSensor(self.player, -0.5945252505010019, 0.9709845691382768, 0.33389599198396797, gnss_noise,True)
         self.rtk_compass = RtkCompass(self.player, weakref.ref(self.gnss_sensor), weakref.ref(self.gnss_sensor_2))
-        self.rtk_sensor = RtkSensor(self.player, -0.5945252505010019, 0.9709845691382768, 0.33389599198396797, gnss_noise,True)
-        self.rtk_sensor_base = RtkSensor(self.player, 7093.949707, 9.657803, 820, gnss_noise, False)
+        self.rtk_sensor = RtkSensor(self.player, 0, 0, 0.2, gnss_noise,True)
+        self.rtk_sensor_base = RtkSensor(self.player, 1900000, 0, 20, gnss_noise, False) #7093.949707, 9.657803, 820,  self.rtk_sensor.sensor.get_location().x + 1000, self.rtk_sensor.sensor.get_location().y + 1000, self.rtk_sensor.sensor.get_location().z
         
         # poles = self.world.get_environment_objects(carla.CityObjectLabel.Buildings)
         # if poles :
@@ -613,6 +613,13 @@ class HUD(object):
         vehicles = world.world.get_actors().filter('vehicle.*')
         # vec_x = world.gnss_sensor_2.lat - world.gnss_sensor.lat
         # vec_y = world.gnss_sensor_2.lon - world.gnss_sensor.lon
+
+        rov = world.rtk_sensor.sensor.get_location()
+        r_base = world.rtk_sensor_base.sensor.get_location()
+        baseline_len = math.sqrt( pow(world.rtk_sensor.lat - world.rtk_sensor_base.lat ,2) + pow(world.rtk_sensor.lon - world.rtk_sensor_base.lon ,2) + pow(world.rtk_sensor.alt - world.rtk_sensor_base.alt ,2) )
+        real_baseline = math.sqrt( pow( rov.x - r_base.x ,2) + pow(rov.y - r_base.y ,2) + pow(rov.z - r_base.z ,2) )
+        baseline_error = baseline_len - real_baseline
+
         self._info_text = [
             'Server:  % 16.0f FPS' % self.server_fps,
             'Client:  % 16.0f FPS' % clock.get_fps(),
@@ -628,8 +635,10 @@ class HUD(object):
             'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
             'RTK_R:% 24s' % ('(% 3.4f, % 3.4f)' % (world.rtk_sensor.lat, world.rtk_sensor.lon)),
             'RTK_B:% 24s' % ('(% 3.4f, % 3.4f)' % (world.rtk_sensor_base.lat, world.rtk_sensor_base.lon)),
+            'Baseline:% 24s' % ('(% 3.4f)' %( baseline_len )),
+            'Baseline_error:% 24s' % ('(% 3.4f)' %( baseline_error )),
             # 'GNSS_1:% 24s' % ('(% 3.4f, % 3.4f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
-            'GNSS_2:% 24s' % ('(% 3.4f, % 3.4f)' % (world.gnss_sensor_2.lat, world.gnss_sensor_2.lon)),
+            # 'GNSS_2:% 24s' % ('(% 3.4f, % 3.4f)' % (world.gnss_sensor_2.lat, world.gnss_sensor_2.lon)),
             # 'GNSS_V:% 24s' % ('(% 2.6f, % 3.6f)' % (vec_x, vec_y)),
             # u'My_Compass:% 3.2f\N{DEGREE SIGN}' % (360 - (math.degrees(math.atan2(vec_x, vec_y)))%360 ), # lal scjitat' ugol 
             # 'RTK_L:% 24s' % ('(% 3.4f)' % ( math.sqrt( pow(world.rtk_compass.vec_x,2) + pow(world.rtk_compass.vec_y,2) + pow(world.rtk_compass.vec_z,2) ) )),
@@ -649,6 +658,25 @@ class HUD(object):
 
         # with open('RTK_DATA.txt','a+') as f:
         #     f.write("{:d}\t{:f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\t{: 09.4f}\n".format(world.hud.frame, world.hud.simulation_time, world.gnss_sensor.lat, world.gnss_sensor.lon, world.gnss_sensor.alt, world.gnss_sensor_2.lat, world.gnss_sensor_2.lon, world.gnss_sensor_2.alt, world.rtk_compass.cur_angle,world.rtk_compass.vec_x, world.rtk_compass.vec_y, world.rtk_compass.vec_z ))
+
+        with open('log_rtk.txt','a+') as f:
+            f.write(
+            "{:d}\t \
+            {:f}\t \
+            {: 09.4f}\t \
+            {: 09.4f}\t \
+            {: 09.4f}\t \
+            {: 09.4f}\t \
+            {: 09.4f}\t \
+            {: 09.4f}\n".format(
+            world.hud.frame, 
+            world.hud.simulation_time,
+            world.rtk_sensor.lat, 
+            world.rtk_sensor.lon, 
+            world.rtk_sensor.alt, 
+            baseline_len,
+            real_baseline,
+            baseline_error))
 
         if isinstance(c, carla.VehicleControl):
             self._info_text += [
@@ -967,13 +995,13 @@ class RtkSensor(object):
         if rover :
             bp.set_attribute("range",str(.1))
         else :
-            bp.set_attribute("range",str(100.0))
+            bp.set_attribute("range",str(30000.0/100))
         bp.set_attribute("rover_flag",str(rover))
 
         if rover :
             self.sensor = world.spawn_actor(bp, carla.Transform(carla.Location(x=x_val, y=y_val, z=z_val)), attach_to=self._parent)
         else :
-            self.sensor = world.spawn_actor(bp, carla.Transform(carla.Location(x=x_val/100.0, y=y_val/100.0, z=z_val/100.0)))
+            self.sensor = world.spawn_actor(bp, carla.Transform(carla.Location(x=x_val/100, y=y_val/100, z=z_val/100)))
         # We need to pass the lambda a weak reference to self to avoid circular
         # reference.
         weak_self = weakref.ref(self)

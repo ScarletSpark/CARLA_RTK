@@ -11,11 +11,14 @@
 // #include "Carla/Actor/ActorBlueprintFunctionLibrary.h"
 #include "Carla/Util/BoundingBoxCalculator.h"
 #include "Carla/Vehicle/CarlaWheeledVehicle.h"
+#include "Engine/Engine.h"
 
 ARtkSensor::ARtkSensor(const FObjectInitializer &ObjectInitializer)
   : Super(ObjectInitializer)
 {
   RandomEngine = CreateDefaultSubobject<URandomEngine>(TEXT("RandomEngine"));
+
+  RtkUpdateRate = 1;
 
   Sphere = CreateDefaultSubobject<USphereComponent>(TEXT("SphereOverlap"));
   Sphere->SetupAttachment(RootComponent);
@@ -133,9 +136,9 @@ void ARtkSensor::Tick(float DeltaSeconds)
   carla::geom::GeoLocation CurrentLocation = CurrentGeoReference.Transform(Location);
 
   // Compute the noise for the sensor
-  LatError = RandomEngine->GetNormalDistribution(0.0f, LatitudeDeviation);
-  LonError = RandomEngine->GetNormalDistribution(0.0f, LongitudeDeviation);
-  AltError = RandomEngine->GetNormalDistribution(0.0f, AltitudeDeviation);
+  LatError = RandomEngine->GetNormalDistributionByTick(0.0f, LatitudeDeviation, GnssUpdateRate);
+  LonError = RandomEngine->GetNormalDistributionByTick(0.0f, LongitudeDeviation, GnssUpdateRate);
+  AltError = RandomEngine->GetNormalDistributionByTick(0.0f, AltitudeDeviation, GnssUpdateRate);
 
   if(!RtkRoverFlag) //if Base, then saving correction;
   {
@@ -143,39 +146,53 @@ void ARtkSensor::Tick(float DeltaSeconds)
   }
   else // if Rover
   {
-    TArray<AActor *> DetectedActors;
-    Sphere->GetOverlappingActors(DetectedActors, ARtkSensor::StaticClass()); // collecting all RtkSensors in a radius
-    // DetectedActors.Remove(GetOwner());
-
-    if (DetectedActors.Num() > 0) // if any RtkSensor in range
+    if( floor(GEngine->GetWorldFromContextObjectChecked(this)->GetTimeSeconds() * RtkUpdateRate) != last_sec) // rtk data updates once a sec
     {
-      float min_distance = FVector::Dist( GetActorLocation(), DetectedActors[0]->GetActorLocation() ); 
-      float distance;
-      int counter = 0;
-      for (int Index = 0; Index != DetectedActors.Num(); ++Index) // looking for the nearest of them
+
+      last_sec = floor(GEngine->GetWorldFromContextObjectChecked(this)->GetTimeSeconds() * RtkUpdateRate);
+
+      TArray<AActor *> DetectedActors;
+      Sphere->GetOverlappingActors(DetectedActors, ARtkSensor::StaticClass()); // collecting all RtkSensors in a radius
+      // DetectedActors.Remove(GetOwner());
+
+      if (DetectedActors.Num() > 0) // if any RtkSensor in range
       {
-        if (DetectedActors[Index] != this)
+        float min_distance = FVector::Dist( GetActorLocation(), DetectedActors[0]->GetActorLocation() ); 
+        float distance;
+        int counter = 0;
+        for (int Index = 0; Index != DetectedActors.Num(); ++Index) // looking for the nearest of them
         {
-          distance = FVector::Dist( GetActorLocation(), DetectedActors[Index]->GetActorLocation() );
-          if (distance < min_distance)
+          if (DetectedActors[Index] != this)
           {
-            min_distance = distance;
-            counter = Index;
+            distance = FVector::Dist( GetActorLocation(), DetectedActors[Index]->GetActorLocation() );
+            if (distance < min_distance)
+            {
+              min_distance = distance;
+              counter = Index;
+            }
           }
         }
-      }
 
-      // SetCorrection(DetectedActors[counter]->GetCorrection()); //adding rtk correction as coordinate's bias
-      ARtkSensor *RSensor = Cast<ARtkSensor>(DetectedActors[counter]);
-      if (RSensor)
+        // SetCorrection(DetectedActors[counter]->GetCorrection()); //adding rtk correction as coordinate's bias
+        ARtkSensor *RSensor = Cast<ARtkSensor>(DetectedActors[counter]);
+        if (RSensor)
+        {
+          SetCorrection(RSensor->GetCorrection()); // applying correction
+
+          float sq = sqrt(min_distance);
+
+          RangeDeviationX = sq * 0.00267261; // calculating the error depending on baseline length ???????
+          RangeDeviationY = sq * 0.00316228;
+        }
+
+      }
+      else //if there is no Sensors around
       {
-        SetCorrection(RSensor->GetCorrection());
-      }
+        SetCorrection(0,0,0); // nullifying correction
 
-    }
-    else //if there is no Sensors around
-    {
-      SetCorrection(0,0,0); // nullifying the correction
+        RangeDeviationX = 0;
+        RangeDeviationY = 0;
+      }
     }
   }
   // Apply the noise to the sensor
@@ -190,8 +207,8 @@ void ARtkSensor::Tick(float DeltaSeconds)
   }
   else
   {
-    Latitude = Location.x + LatitudeBias + LatError;
-    Longitude = Location.y + LongitudeBias + LonError;
+    Latitude = CorrectionX > 0 ? Location.x + LatitudeBias + LatError + RangeDeviationX : Location.x + LatitudeBias + LatError - RangeDeviationX;
+    Longitude = CorrectionY > 0 ? Location.y + LongitudeBias + LonError + RangeDeviationY : Location.y + LongitudeBias + LonError - RangeDeviationY;
     Altitude = Location.z + AltitudeBias + AltError;
   }
 
@@ -294,6 +311,11 @@ void ARtkSensor::SetAltitudeBias(float Value)
   AltitudeBias = Value;
 }
 
+void ARtkSensor::SetUpdateRate(float value)
+{
+  GnssUpdateRate = value; 
+}
+
 bool  ARtkSensor::GetGeoFlag() const
 {
   return GeoFlag;
@@ -322,6 +344,11 @@ float ARtkSensor::GetLongitudeBias() const
 float ARtkSensor::GetAltitudeBias() const
 {
   return AltitudeBias;
+}
+
+float ARtkSensor::GetUpdateRate()
+{
+  return GnssUpdateRate;
 }
 
 void ARtkSensor::BeginPlay()

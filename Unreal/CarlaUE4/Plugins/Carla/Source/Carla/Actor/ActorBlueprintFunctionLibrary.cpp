@@ -1043,6 +1043,13 @@ void UActorBlueprintFunctionLibrary::MakeRtkDefinition(
   RtkRoverFlag.RecommendedValues = { TEXT("false") };
   RtkRoverFlag.bRestrictToRecommended = false;
 
+  // - GnssUpdateRate -----------------------------
+  FActorVariation RtkUpdateRate;
+  RtkUpdateRate.Id = TEXT("update_rate");
+  RtkUpdateRate.Type = EActorAttributeType::Float;
+  RtkUpdateRate.RecommendedValues = { TEXT("5.0") };
+  RtkUpdateRate.bRestrictToRecommended = false;
+
   Definition.Variations.Append({
     NoiseSeed,
     StdGeoFlag,
@@ -1053,7 +1060,8 @@ void UActorBlueprintFunctionLibrary::MakeRtkDefinition(
     StdDevAlt,
     BiasAlt,
     RtkRadius, 
-    RtkRoverFlag});
+    RtkRoverFlag,
+    RtkUpdateRate});
 
   Success = CheckActorDefinition(Definition);
 }
@@ -1667,6 +1675,8 @@ void UActorBlueprintFunctionLibrary::SetRtk(
       RetrieveActorAttributeToFloat("range", Description.Variations, 1000.0f));
   Rtk->SetRoverFlag(
       RetrieveActorAttributeToBool("rover_flag", Description.Variations, true));
+  Rtk->SetUpdateRate(
+      RetrieveActorAttributeToFloat("update_rate", Description.Variations, 5.0f));
 }
 
 void UActorBlueprintFunctionLibrary::SetIMU(

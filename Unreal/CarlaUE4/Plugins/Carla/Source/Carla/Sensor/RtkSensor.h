@@ -53,10 +53,12 @@ public:
     void SetCorrection(float X, float Y, float Z);
     void SetCorrection(FVector &vec);
     void SetCorrection(FVector vec);
+    void SetUpdateRate(float value);
     
     float GetRange();
     bool GetRoverFlag();
     FVector GetCorrection();
+    float GetUpdateRate();
 
 protected:
 
@@ -97,5 +99,20 @@ private:
     float LonError;
     UPROPERTY(VisibleAnywhere)
     float AltError;
+
+    UPROPERTY(EditAnywhere)
+    float GnssUpdateRate;
+
+    UPROPERTY(VisibleAnywhere)
+    float RangeDeviationX;
+
+    UPROPERTY(VisibleAnywhere)
+    float RangeDeviationY;
+
+    UPROPERTY(EditAnywhere)
+    float last_sec;
+
+    UPROPERTY(EditAnywhere)
+    float RtkUpdateRate;
 
 };
