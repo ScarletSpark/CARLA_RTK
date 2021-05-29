@@ -181,8 +181,8 @@ void ARtkSensor::Tick(float DeltaSeconds)
 
           float sq = sqrt(min_distance);
 
-          RangeDeviationX = sq * 0.00267261; // calculating the error depending on baseline length ???????
-          RangeDeviationY = sq * 0.00316228;
+          RangeDeviationX = sq * 0.0000267261; // calculating the error depending on baseline length ???????
+          RangeDeviationY = sq * 0.0000316228;
         }
 
       }

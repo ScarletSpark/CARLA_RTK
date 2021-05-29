@@ -633,17 +633,17 @@ class HUD(object):
             'Accelero: (%5.1f,%5.1f,%5.1f)' % (world.imu_sensor.accelerometer),
             'Gyroscop: (%5.1f,%5.1f,%5.1f)' % (world.imu_sensor.gyroscope),
             'Location:% 20s' % ('(% 5.1f, % 5.1f)' % (t.location.x, t.location.y)),
-            'RTK_R:% 24s' % ('(% 3.4f, % 3.4f)' % (world.rtk_sensor.lat, world.rtk_sensor.lon)),
-            'RTK_B:% 24s' % ('(% 3.4f, % 3.4f)' % (world.rtk_sensor_base.lat, world.rtk_sensor_base.lon)),
-            'Baseline:% 24s' % ('(% 3.4f)' %( baseline_len )),
-            'Baseline_error:% 24s' % ('(% 3.4f)' %( baseline_error )),
+            'RTK_R:% 23s' % ('(% 3.4f, % 3.4f)' % (world.rtk_sensor.lat, world.rtk_sensor.lon)),
+            'RTK_B:% 23s' % ('(% 3.4f, % 3.4f)' % (world.rtk_sensor_base.lat, world.rtk_sensor_base.lon)),
+            'Baseline:% 20s' % ('(% 3.4f)' %( baseline_len )),
+            'Baseline error:% 14s' % ('(% 3.4f)' %( baseline_error )),
             # 'GNSS_1:% 24s' % ('(% 3.4f, % 3.4f)' % (world.gnss_sensor.lat, world.gnss_sensor.lon)),
             # 'GNSS_2:% 24s' % ('(% 3.4f, % 3.4f)' % (world.gnss_sensor_2.lat, world.gnss_sensor_2.lon)),
             # 'GNSS_V:% 24s' % ('(% 2.6f, % 3.6f)' % (vec_x, vec_y)),
-            # u'My_Compass:% 3.2f\N{DEGREE SIGN}' % (360 - (math.degrees(math.atan2(vec_x, vec_y)))%360 ), # lal scjitat' ugol 
+            # u'RTK compass:% 3.2f\N{DEGREE SIGN}' % (360 - (math.degrees(math.atan2(vec_x, vec_y)))%360 ), # lal scjitat' ugol 
             # 'RTK_L:% 24s' % ('(% 3.4f)' % ( math.sqrt( pow(world.rtk_compass.vec_x,2) + pow(world.rtk_compass.vec_y,2) + pow(world.rtk_compass.vec_z,2) ) )),
             # 'RTK_V:% 24s' % ('(% 3.4f, % 3.4f, % 3.4f)' % (world.rtk_compass.vec_x, world.rtk_compass.vec_y, world.rtk_compass.vec_z)),
-            # u'RTK_D:% 3.2f\N{DEGREE SIGN}' % ( world.rtk_compass.cur_angle), # lal scjitat' ugol 
+            u'RTK compass:% 17s' % ('(%3.2f\N{DEGREE SIGN})' % ( world.rtk_compass.cur_angle)), # lal scjitat' ugol 
             # 'Gnss_z:  % 3.8f' % (world.gnss_sensor_2.alt - world.gnss_sensor.alt) ,
             'Height:  % 18.0f m' % t.location.z,
             '']
@@ -718,7 +718,7 @@ class HUD(object):
 
     def render(self, display):
         if self._show_info:
-            info_surface = pygame.Surface((250, self.dim[1]))
+            info_surface = pygame.Surface((220, self.dim[1]))
             info_surface.set_alpha(100)
             display.blit(info_surface, (0, 0))
             v_offset = 4
@@ -995,7 +995,7 @@ class RtkSensor(object):
         if rover :
             bp.set_attribute("range",str(.1))
         else :
-            bp.set_attribute("range",str(30000.0/100))
+            bp.set_attribute("range",str(30000.0))
         bp.set_attribute("rover_flag",str(rover))
 
         if rover :
@@ -1315,6 +1315,8 @@ def game_loop(args):
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
+        # pygame.display.toggle_fullscreen()
+
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
@@ -1370,7 +1372,7 @@ def main():
     argparser.add_argument(
         '--res',
         metavar='WIDTHxHEIGHT',
-        default='1280x720',
+        default='1920x1080',
         help='window resolution (default: 1280x720)')
     argparser.add_argument(
         '--filter',

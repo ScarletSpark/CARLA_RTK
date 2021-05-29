@@ -52,10 +52,12 @@ for line in parsed_lines:
 # for t in range(len(x)):
 #     rtk_len.append( math.sqrt( pow( x[t] - rtk_base_x ,2) + pow( y[t] - rtk_base_y ,2) + pow( z[t] - rtk_base_z ,2) ) )
 
-plt.plot(sim_timestamp, [abs(ele) for ele in baseline_error])
-plt.ylim([0, 0.7])
-# plt.set_xlabel('Baseline Length')
-# plt.set_ylabel('diff')
+plt.plot(np.array(sim_timestamp)-sim_timestamp[0], [abs(ele) for ele in baseline_error], 'bo', scalex='True',label='Baseline error', markersize=0.2, linewidth=0.2)
+plt.ylim([0.02, 0.05])
+# plt.xlim([0, sim_timestamp[len(sim_timestamp)-1] - sim_timestamp[0]])
+plt.grid()
+plt.xlabel('Simulation time (sec)')
+plt.ylabel('Baseline error (m)')
 
 # plt.hist(baseline_error, bins=18)
 
